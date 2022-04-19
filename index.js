@@ -1,24 +1,24 @@
 const express = require("express");
+const { send } = require("express/lib/response");
+const mongoose = require("mongoose");
+const Character = require("./models/Character")
 const app = express();
 
-app.use(express.json())
+try{
+ mongoose.connect(
+    "mongodb+srv://juli:froggy101@cluster0.ah6rv.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
+    {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    }
+ );
+ console.log("Banco de dados conectado!")
+} catch (err) {
+    console.log(`Erro ao conectar no banco de dados ${err}`)
+}
 
-const characters = [
-    {
-        id: 1,
-        name:"Harry Potter",
-        species: "human",
-        house: "Gryffindor",
-        actor: "Ganiel Radcliffe"
-    },
-    {
-        id: 2,
-        name:"Hermione Granger",
-        species: "human",
-        house: "Gryffindor",
-        actor: "Emma Watson"
-    },
-]
+
+app.use(express.json())
 
 //GET -- READ
 app.get("/", /*function*/ (req, res) => {
@@ -26,11 +26,22 @@ app.get("/", /*function*/ (req, res) => {
 });
 
 //POST -- CREATE
-app.post("/character", (req, res) => {
-    const character = req.body //get what was in the request body
+app.post("/character", async (req, res) => {
+    const {name, species, house, actor} = req.body //get what was in the request body
 
-    character.id = characters.length + 1 //create automatic ids 
-    characters.push(character) //put the infos at the end
+    if(!name || !species || !house || !actor) {
+        res.status(400).send({message:"Você não enviou todos os dados necessários para cadastro"})
+        return;
+    }
+
+    const character = await new Character({
+        name,
+        species,
+        house,
+        actor
+    })
+
+    await character.save()
 
     res.send({message: "Character created successfully!"})
 });
