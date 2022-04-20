@@ -4,25 +4,48 @@ const mongoose = require("mongoose");
 const Character = require("./models/Character")
 const app = express();
 
-try{
+try {
  mongoose.connect(
     "mongodb+srv://juli:froggy101@cluster0.ah6rv.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
     {
         useNewUrlParser: true,
-        useUnifiedTopology: true
+        useUnifiedTopology: true,
     }
  );
  console.log("Banco de dados conectado!")
 } catch (err) {
     console.log(`Erro ao conectar no banco de dados ${err}`)
-}
+};
 
 
 app.use(express.json())
 
-//GET -- READ
-app.get("/", /*function*/ (req, res) => {
+//GETALL -- READ
+app.get("/characters", /*function*/ async (req, res) => {
+    const characters = await Character.find()
+
+    if(characters.length === 0){
+        return res.status(404).send({message: "Não existem personagens cadastrados!"})
+    }
+
     res.send(characters.filter(Boolean)); //when i send, the const that has in the (), will be shown to my client (ThunderClient)
+});
+
+//getbyId
+app.get("/character/:id", async (req, res) => {
+    const { id } = req.params;
+
+    if(!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).send({message: "Id inválido!"});
+        return;
+    }
+    const character = await Character.findById(id);
+
+    if(!character){
+        return res.status(404).send({message: "Personagem não encontrado"})
+    }
+
+    res.send(character);
 });
 
 //POST -- CREATE
@@ -46,52 +69,53 @@ app.post("/character", async (req, res) => {
     res.send({message: "Character created successfully!"})
 });
 
-//getbyId
-app.get("/character/:id", (req, res) => {
-    const id = +req.params.id
-    const character = characters.find(c => c.id === id)
-
-    if(!character) {
-        res.status(404).send({message: "Character does not exist. Try another id."})
-        return;
-    }
-
-    res.send(character)
-});
-
 //PUT -- UPDATE
-app.put("/character/:id", (req, res) => {
-    const id = +req.params.id;
-    const character = characters.find((c) => c.id === id);
+app.put("/character/:id", async (req, res) => {
+    const { id } = req.params;
 
-    if(!character) {
-        res.status(404).send({message: "Character does not exist. Try another id."});
+    if(!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).send({message: "Id inválido!"});
         return;
     }
 
-    const {name, species, house, actor} = req.body
+    const character = await Character.findById(id);
 
-    character.name = name
-    character.species = species
-    character.house = house
+    if(!character){
+        return res.status(404).send({message: "Personagem não encontrado"});
+    }
+
+    const {name, species, house, actor} = req.body;
+
+    if(!name || !species || !house || !actor) { //all those categories is going to be required to update
+        res.status(400).send({message:"Você não enviou todos os dados necessários para a atualização"});
+        return;
+    }
+
+    character.name = name;
+    character.species = species;
+    character.house = house;
     character.actor = actor
 
-    res.send(character)
+    await character.save() //WILL WAIT TIL DATABASE EXECUTION IS COMPLETED
 
+    res.send({message: `Character created successfully! ${character}` })
 });
 
 //DELETE -- DELETE
-app.delete("/character/:id", (req, res) => {
-    const id = +req.params.id
-    const character = characters.find(c => c.id === id)
+app.delete("/character/:id", async (req, res) => {
+    const { id } = req.params;
 
-    if(!character) {
-        res.status(404).send({message: "Character does not exist. Try another id."})
+    if(!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).send({message: "Id inválido!"});
         return;
     }
 
-    const indexCharacter = characters.indexOf(character);
-    delete characters[indexCharacter];
+    const character = await Character.findById(id)
+
+    if (!character){
+        return res.status(404).send({message: "esse personagem não existe"})
+    }
+    await character.remove()
 
     res.send({message: "Character deleted succesfully!"})
 
