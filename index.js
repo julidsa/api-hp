@@ -1,12 +1,16 @@
+require("dotenv").config()
 const express = require("express");
 const { send } = require("express/lib/response");
 const mongoose = require("mongoose");
 const Character = require("./models/Character")
+
 const app = express();
+
+const port = 3000 || process.env.PORT;
 
 try {
  mongoose.connect(
-    "mongodb+srv://juli:froggy101@cluster0.ah6rv.mongodb.net/myFirstDatabase?retryWrites=true&w=majority",
+    process.env.DATABASE_URI,
     {
         useNewUrlParser: true,
         useUnifiedTopology: true,
@@ -16,7 +20,6 @@ try {
 } catch (err) {
     console.log(`Erro ao conectar no banco de dados ${err}`)
 };
-
 
 app.use(express.json())
 
@@ -113,7 +116,7 @@ app.delete("/character/:id", async (req, res) => {
     const character = await Character.findById(id)
 
     if (!character){
-        return res.status(404).send({message: "esse personagem não existe"})
+        return res.status(404).send({message: "esse personagem não existe "})
     }
     await character.remove()
 
@@ -123,6 +126,6 @@ app.delete("/character/:id", async (req, res) => {
 });
 
 
-app.listen(3000, () => {
-    console.log("Servidor rodando em http://localhost:3000")
+app.listen(port, () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
 });
